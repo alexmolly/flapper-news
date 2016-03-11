@@ -28,6 +28,7 @@ function($stateProvider, $urlRouterProvider) {
 		    }]
 		}	  
 	})
+
 	.state('login', {
 	  url: '/login',
 	  templateUrl: '/login.html',
@@ -38,6 +39,7 @@ function($stateProvider, $urlRouterProvider) {
 	    }
 	  }]
 	})
+	
 	.state('register', {
 	  url: '/register',
 	  templateUrl: '/register.html',
@@ -54,7 +56,7 @@ function($stateProvider, $urlRouterProvider) {
 
 
 
-app.factory('posts', ['$http', function($http){
+app.factory('posts', ['$http', 'auth', function($http, auth){
 
 	var o = {posts: []};
 
@@ -73,30 +75,36 @@ app.factory('posts', ['$http', function($http){
 
 
 	o.create = function(post) {
-		return $http.post('/posts', post).success(function(data){
-			o.posts.push(data);
-		});
+	  return $http.post('/posts', post, {
+	    headers: {Authorization: 'Bearer '+auth.getToken()}
+	  }).success(function(data){
+	    o.posts.push(data);
+	  });
 	};
 
 	o.upvote = function(post) {
-	  return $http.put('/posts/' + post._id + '/upvote')
-	    .success(function(data){
-	      post.upvotes += 1;
-	    });
-	};	
+	  return $http.put('/posts/' + post._id + '/upvote', null, {
+	    headers: {Authorization: 'Bearer '+auth.getToken()}
+	  }).success(function(data){
+	    post.upvotes += 1;
+	  });
+	};
 
 	o.addComment = function(id, comment) {
-  		return $http.post('/posts/' + id + '/comments', comment);
+	  return $http.post('/posts/' + id + '/comments', comment, {
+	    headers: {Authorization: 'Bearer '+auth.getToken()}
+	  });
 	};
 
 	o.upvoteComment = function(post, comment) {
-	  return $http.put('/posts/' + post._id + '/comments/'+ comment._id + '/upvote')
-	    .success(function(data){
-	      comment.upvotes += 1;
-	    });
-	};	
+	  return $http.put('/posts/' + post._id + '/comments/'+ comment._id + '/upvote', null, {
+	    headers: {Authorization: 'Bearer '+auth.getToken()}
+	  }).success(function(data){
+	    comment.upvotes += 1;
+	  });
+	};
 
-  return o;
+	return o;
 }]);
 
 
@@ -156,10 +164,12 @@ app.factory('auth', ['$http', '$window', function($http, $window){
 app.controller('MainCtrl', [
 '$scope',
 'posts',
-function($scope, posts){
+'auth',
+function($scope, posts, auth){
 
 	$scope.test = 'Hello world from me!';
 	$scope.posts = posts.posts;
+	$scope.isLoggedIn = auth.isLoggedIn;
 
 	$scope.addPost = function(){
 	  
@@ -185,9 +195,11 @@ app.controller('PostsCtrl', [
 '$scope',
 'posts',
 'thePost',
-function($scope, posts, post){
+'auth',
+function($scope, posts, post, auth){
 
 	$scope.post=post;
+	$scope.isLoggedIn = auth.isLoggedIn;
 
 	$scope.addComment = function(){
 		if($scope.body === '') { return; }
@@ -233,6 +245,8 @@ function($scope, $state, auth){
     });
   };
 
+}]);
+
 
 app.controller('NavCtrl', [
 '$scope',
@@ -241,6 +255,4 @@ function($scope, auth){
   $scope.isLoggedIn = auth.isLoggedIn;
   $scope.currentUser = auth.currentUser;
   $scope.logOut = auth.logOut;
-}]);
-
 }]);
